@@ -2,7 +2,6 @@ require('dotenv').config();
 const passport = require('passport');
 const GglStrategy = require('passport-google-oauth20').Strategy;
 const FbStrategy = require('passport-facebook').Strategy;
-const User = require("./models/userModel");
 
 module.exports = {
     google: passport.use(new GglStrategy(
