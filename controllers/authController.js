@@ -6,10 +6,8 @@ const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const sendEmail = require("../utils/email");
 const nodemailer = require('nodemailer');
-const dotenv = require("dotenv").config();
+require("dotenv").config();
 const mongoose = require("mongoose");
-
-
 
 // functions
 const signToken = (id) => {
