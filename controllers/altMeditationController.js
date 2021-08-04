@@ -27,18 +27,21 @@ exports.download = (req, res) => {
 
         storeMp3(audioPath, docs.title);
     
-        let positions = range.replace(/bytes=/, "").split("-");
-        let start = parseInt(positions[0], 10);
-        let total = fs.statSync(audioPath).size;
-        let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
-        let chunksize = (end - start) + 1;
-
-        res.writeHead(206, {
-            "Content-Range": "bytes " + start + "-" + end + "/" + total,
-            "Accept-Ranges": "bytes",
-            "Content-Length": chunksize,
-            "Content-Type": 'audio/mp3'
-        });
+        const audioSize=fs.statSync(audioPath).size;
+    
+        const CHUNK_SIZE = (10**6)/2; //512kb
+        const start = Number(range.replace(/\D/g, ""));
+        const end = Math.min(start + CHUNK_SIZE, audioSize-1);
+    
+        const contentLength = end - start + 1;
+        const headers = {
+            "Content-Range": `bytes ${start}-${end}/${audioSize}`,
+            "Accept-Range": `bytes`,
+            "Content-Length": contentLength,
+            "Content-Type": "audio/mp3"
+        };
+    
+        res.writeHead(206, headers);
         
         client.getrange(docs.title, start, end, (err, data) => {
             if(err) throw err;
@@ -47,7 +50,7 @@ exports.download = (req, res) => {
                 stream.push(data);
                 stream.push(null);
 
-                return stream.pipe(res);
+                return stream.pipe(res, {end: true});
             }
         });
     })

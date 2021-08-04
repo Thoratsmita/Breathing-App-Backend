@@ -1,7 +1,7 @@
 const MeditationTrack=require('../models/MeditationTracksModel');
 const fs = require('fs');
 const path = require('path');
-let staticFilesPath = path.join(__dirname, '../static');
+var staticFilesPath = path.join(__dirname, '../static');
 
 
 exports.allMeditationTracks=(req, res)=>{
@@ -47,27 +47,27 @@ exports.download = (req, res) => {
         }
     
         const audioPath=staticFilesPath + `/meditationTracks/${docs.title}.mp3`;
+        const audioSize=fs.statSync(audioPath).size;
     
-        let positions = range.replace(/bytes=/, "").split("-");
-        let start = parseInt(positions[0], 10);
-        let total = fs.statSync(audioPath).size;
-        let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
-        let chunksize = (end - start) + 1;
+        const CHUNK_SIZE = (10**6)/2; //512kb
+        const start = Number(range.replace(/\D/g, ""));
+        const end = Math.min(start + CHUNK_SIZE, audioSize-1);
     
-        res.writeHead(206, {
-            "Content-Range": "bytes " + start + "-" + end + "/" + total,
-            "Accept-Ranges": "bytes",
-            "Content-Length": chunksize,
-            "Content-Type": 'audio/mp3'
-        });
+        const contentLength = end - start + 1;
+        const headers = {
+            "Content-Range": `bytes ${start}-${end}/${audioSize}`,
+            "Accept-Range": `bytes`,
+            "Content-Length": contentLength,
+            "Content-Type": "audio/mp3"
+        };
     
-        fs.createReadStream(audioPath, { start: start, end: end, autoClose: true })
-        .on('end', function () {
-            console.log('Stream Done');
+        res.writeHead(206, headers);
+    
+        const audioStream=fs.createReadStream(audioPath, { start, end });
+
+        audioStream.pipe(res).once("error", ()=>{
+            return res.status(400).json({error:"something went wrong"});
         })
-        .on("error", function (err) {
-            res.end(err);
-        })
-        .pipe(res, { end: true });
+        
     })
 };
