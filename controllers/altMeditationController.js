@@ -1,32 +1,9 @@
-const MeditationTrack=require('../models/MeditationTracksModel');
 const fs = require('fs');
+const client = require('../redis');
+const MeditationTrack=require('../models/MeditationTracksModel');
 const path = require('path');
 let staticFilesPath = path.join(__dirname, '../static');
-
-
-exports.allMeditationTracks=(req, res)=>{
-    
-    MeditationTrack.find({}, async (err, docs)=>{
-        if(err){
-            return res.status(400).json({status: "error", error: err});
-        }
-        return res.status(200).json(docs);
-    })
-}
-
-
-exports.upload=async (req, res) => {
-    const { title, artist, description, isPremium}=req.body;
-
-    const newMeditationTrack = await MeditationTrack.create({
-        title: title,
-        artist: artist, 
-        description: description,
-        isPremium: isPremium
-    })
-    return res.json(newMeditationTrack);
-
-};
+const { Readable } = require('stream');
 
 exports.download = (req, res) => {
     console.log("got downloading request")
@@ -47,27 +24,44 @@ exports.download = (req, res) => {
         }
     
         const audioPath=staticFilesPath + `/meditationTracks/${docs.title}.mp3`;
+
+        storeMp3(audioPath, docs.title);
     
         let positions = range.replace(/bytes=/, "").split("-");
         let start = parseInt(positions[0], 10);
         let total = fs.statSync(audioPath).size;
         let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
         let chunksize = (end - start) + 1;
-    
+
         res.writeHead(206, {
             "Content-Range": "bytes " + start + "-" + end + "/" + total,
             "Accept-Ranges": "bytes",
             "Content-Length": chunksize,
             "Content-Type": 'audio/mp3'
         });
-    
-        fs.createReadStream(audioPath, { start: start, end: end, autoClose: true })
-        .on('end', function () {
-            console.log('Stream Done');
-        })
-        .on("error", function (err) {
-            res.end(err);
-        })
-        .pipe(res, { end: true });
+        
+        client.getrange(docs.title, start, end, (err, data) => {
+            if(err) throw err;
+            else {
+                let stream = new Readable();
+                stream.push(data);
+                stream.push(null);
+
+                return stream.pipe(res);
+            }
+        });
     })
+};
+
+
+//store the audio file in redis database for faster streaming.
+//Changes to the key is to be done so that the files are stored in memory as the hashmap of userid and playlist
+//Once the user closes the app, the audio files in the memory is flushed.
+const storeMp3 = (filePath, key) => {
+    let audioFile = fs.readFileSync(filePath);
+    client.set(key, audioFile, function() {
+        client.get(key, err => {
+            if(err) throw err;
+        })
+    });
 };

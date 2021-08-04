@@ -6,6 +6,7 @@ const globalErrorHandler = require("./controllers/errorController");
 const session = require('express-session');
 const userRouter = require("./routes/userRoutes");
 const meditationTrackRouter=require("./routes/meditationTrackRoutes");
+const altMeditationTrackRouter=require("./routes/altMeditationTrackRoutes");
 const sleepTrackRouter=require("./routes/sleepTrackRoutes");
 const relaxTrackRouter=require("./routes/relaxTrackRoutes");
 const passport = require('passport');
@@ -36,6 +37,7 @@ passport.deserializeUser(function(obj, cb) {
 
 app.use("/api/users", userRouter);
 app.use("/api/meditation", meditationTrackRouter);
+app.use("/api/altMeditation", altMeditationTrackRouter);
 app.use("/api/sleep", sleepTrackRouter);
 app.use("/api/relax", relaxTrackRouter);
 
