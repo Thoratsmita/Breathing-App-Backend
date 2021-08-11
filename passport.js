@@ -1,5 +1,6 @@
 require('dotenv').config();
 const passport = require('passport');
+const UserService = require('./service/userService');
 const GglStrategy = require('passport-google-oauth20').Strategy;
 const FbStrategy = require('passport-facebook').Strategy;
 
@@ -11,8 +12,28 @@ module.exports = {
             callbackURL: 'http://localhost:3000/api/users/auth/google/callback',
         },
         
-        function(accesstoken, refreshtoken, profile, done) {
-            return done(null, profile)
+        async function(accesstoken, refreshtoken, profile, done) {
+            const email = profile.emails[0].value;
+            const name = profile.name.givenName + " " + profile.name.familyName;
+            const photo = profile.photos[0].value;
+            const source = "google";
+            
+            const currentUser = await UserService.getUserByEmail({email});
+
+            if(!currentUser) {
+                const newUser = await UserService.addUser({
+                    email,
+                    name,
+                    photo,
+                    source
+                })
+
+                return done(null, newUser);
+            }
+
+            if (currentUser.source !== 'google') {
+                return done(null, false)
+            }
         }
     )),
 
@@ -20,11 +41,31 @@ module.exports = {
         {
             clientID: process.env.FACEBOOK_APP_ID,
             clientSecret: process.env.FACEBOOK_APP_SECRET,
-            callbackURL: "http://localhost:3000/auth/facebook/callback"
+            callbackURL: "http://localhost:3000/auth/facebook/callback",
+            profileFields: ["email", "name"]
         },
         
-        function(accesstoken, refreshtoken, profile, done) {
-            return done(null, profile)
+        async function(accesstoken, refreshtoken, profile, done) {
+            console.log(profile)
+            const { email, first_name, last_name, photo } = profile._json;
+            const userData = {
+                email,
+                name: first_name + " " + last_name,
+                photo: photo,
+                source: 'facebook'
+            };
+            
+            const currentUser = await UserService.getUserByEmail({email});
+
+            if(!currentUser) {
+                const newUser = await UserService.addUser(userData)
+
+                return done(null, newUser);
+            }
+
+            if (currentUser.source !== 'facebook') {
+                return done(null, false)
+            }
         }
     ))
 }

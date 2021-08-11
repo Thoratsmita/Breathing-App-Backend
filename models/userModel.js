@@ -23,13 +23,13 @@ const userSchema = new Schema({
   },
   password: {
     type: String,
-    required: [true, "Please provide a password"],
+    required: (this.source === 'google' || 'facebook') ? [false] : [true, "Please provide a password"],
     minlength: 8,
     select: false,
   },
   passwordConfirm: {
     type: String,
-    required: [true, "Please confirm your password"],
+    required: (this.source === 'google' || 'facebook') ? [false] : [true, "Please provide a password"],
     validate: {
       validator: function (el) {
         return el === this.password;
@@ -37,6 +37,7 @@ const userSchema = new Schema({
       message: "Passwords did not match",
     },
   },
+  source: { type: String },
   confirmed: {
     type: Boolean,
     defaultValue: false,
@@ -52,6 +53,13 @@ const userSchema = new Schema({
     select: false,
   },
 });
+
+// userSchema.pre("save", async function (next) {
+//   if (this.source === 'google' || 'facebook') {
+//     this.password.required = false;
+//     this.passwordConfirm.required = false;
+//   }
+// })
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();

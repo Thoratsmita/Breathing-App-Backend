@@ -31,8 +31,9 @@ passport.serializeUser(function(user, cb) {
   cb(null, user);
 });
 
-passport.deserializeUser(function(obj, cb) {
-  cb(null, obj);
+passport.deserializeUser(async function(email, cb) {
+  const currentUser = await User.findOne({ email });
+  cb(null, currentUser);
 });
 
 app.use("/api/users", userRouter);

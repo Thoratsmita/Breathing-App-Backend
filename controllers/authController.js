@@ -43,7 +43,15 @@ exports.signup = (req, res, next) => {
         password: password,
         passwordConfirm: passwordConfirm,
       });
-      createSendToken(newUser, 201, res);
+
+      host=req.get('host');
+      
+      link="http://"+req.get('host')+"/verify?id="+createSendToken(newUser, 201, res);
+      sendEmail({
+        email: newUser.email,
+        subject: 'Verify Account',
+        text: `Hello, Please Click on the link to verify your email. ${link} Click here to verify`
+      })
     }
     else if(err){
       return err;
@@ -53,6 +61,28 @@ exports.signup = (req, res, next) => {
     }
   });
 };
+
+exports.verifySignUp = async (req, res, next) => {
+
+    if((req.protocol+"://"+req.get('host'))==("http://"+host))
+    {
+        console.log("Domain is matched. Information is from Authentic email");
+        if(req.query.id==rand)
+        {
+            console.log("email is verified");
+            res.end("Email "+mailOptions.to+" is been Successfully verified");
+        }
+        else
+        {
+            console.log("email is not verified");
+            res.end("Bad Request");
+        }
+    }
+    else
+    {
+        res.end("Request is from unknown source");
+    }
+}
 
 // for- Login
 exports.login = async (req, res, next) => {

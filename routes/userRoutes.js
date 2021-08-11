@@ -39,6 +39,7 @@ router.get("/auth/facebook/logout", (req, res) => {
 
 // all Routes
 router.post("/signup", authController.signup);
+router.get("/verify", authController.verifySignUp);
 router.post("/login", authController.login);
 
 router.post("/forgotPassword", authController.forgotPassword);
